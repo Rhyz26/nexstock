@@ -1,0 +1,66 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand: #1971C2;
+  --brand-light: #E7F5FF;
+}
+
+body {
+  font-family: var(--font-inter), sans-serif;
+  background: #F8F9FA;
+  min-height: 100vh;
+}
+
+.page-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #E9ECEF;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: box-shadow 0.15s;
+}
+.stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th {
+  background: #F8F9FA;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6C757D;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #E9ECEF;
+}
+.data-table td {
+  padding: 12px 14px;
+  font-size: 13.5px;
+  border-bottom: 1px solid #F1F3F5;
+  color: #343A40;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #FAFBFC; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.status-paid    { background: #EBFBEE; color: #2F9E44; }
+.status-pending { background: #FFF3BF; color: #E67700; }
+.status-partial { background: #E7F5FF; color: #1971C2; }
+.status-overdue { background: #FFE3E3; color: #C92A2A; }
+.status-cancelled { background: #F1F3F5; color: #868E96; }

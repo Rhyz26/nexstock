@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(CASHIER)
+  businessId    String?
+  business      Business? @relation(fields: [businessId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Business {
+  id            String     @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  logo          String?
+  currency      String     @default("UGX")
+  taxRate       Float      @default(0)
+  plan          Plan       @default(STARTER)
+  planExpiresAt DateTime?
+  smsCredits    Int        @default(10)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  users         User[]
+  products      Product[]
+  customers     Customer[]
+  invoices      Invoice[]
+  expenses      Expense[]
+  payments      Payment[]
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  name         String
+  sku          String?
+  category     String?
+  buyingPrice  Float         @default(0)
+  sellingPrice Float
+  stock        Int           @default(0)
+  lowStockAt   Int           @default(5)
+  unit         String        @default("pcs")
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id])
+  invoiceItems InvoiceItem[]
+  stockLogs    StockLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model StockLog {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String
+  quantity  Int
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Customer {
+  id         String    @id @default(cuid())
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  balance    Float     @default(0)
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id])
+  invoices   Invoice[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  number      String
+  customerId  String?
+  customer    Customer?     @relation(fields: [customerId], references: [id])
+  businessId  String
+  business    Business      @relation(fields: [businessId], references: [id])
+  status      InvoiceStatus @default(PENDING)
+  subtotal    Float
+  discount    Float         @default(0)
+  tax         Float         @default(0)
+  total       Float
+  dueDate     DateTime?
+  notes       String?
+  items       InvoiceItem[]
+  payments    Payment[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model InvoiceItem {
+  id         String  @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  name       String
+  quantity   Int
+  price      Float
+  total      Float
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice       @relation(fields: [invoiceId], references: [id])
+  businessId String
+  business   Business      @relation(fields: [businessId], references: [id])
+  amount     Float
+  method     PaymentMethod @default(CASH)
+  reference  String?
+  createdAt  DateTime      @default(now())
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+  category   String
+  amount     Float
+  note       String?
+  date       DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  CASHIER
+}
+
+enum Plan {
+  STARTER
+  GROWTH
+  PRO
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  MTN_MOMO
+  AIRTEL_MONEY
+  BANK_TRANSFER
+  OTHER
+}

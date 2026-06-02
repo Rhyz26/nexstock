@@ -1,0 +1,41 @@
+{
+  "name": "nexstock",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@mantine/core": "^7.6.0",
+    "@mantine/dates": "^7.6.0",
+    "@mantine/hooks": "^7.6.0",
+    "@mantine/notifications": "^7.6.0",
+    "@prisma/client": "^5.10.0",
+    "@tabler/icons-react": "^3.0.0",
+    "bcryptjs": "^2.4.3",
+    "dayjs": "^1.11.10",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "next": "14.1.0",
+    "next-auth": "^4.24.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.12.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.1.0",
+    "postcss": "^8.5.15",
+    "prisma": "^5.10.0",
+    "tailwindcss": "^3.4.19"
+  }
+}
