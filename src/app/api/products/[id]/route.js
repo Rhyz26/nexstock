@@ -1,13 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { requireAuth, ok, err } from '@/lib/apiHelper'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req, { params }) {
   const { error, session } = await requireAuth()
   if (error) return error
+
   const product = await prisma.product.findFirst({
     where: { id: params.id, businessId: session.user.businessId },
-    include: { stockLogs: { orderBy: { createdAt: 'desc' }, take: 20 } },
+    include: {
+      stockLogs: { orderBy: { createdAt: 'desc' }, take: 20 },
+    },
   })
+
   if (!product) return err('Not found', 404)
   return ok(product)
 }
@@ -15,6 +21,7 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   const { error, session } = await requireAuth()
   if (error) return error
+
   const data = await req.json()
 
   const existing = await prisma.product.findFirst({
@@ -56,10 +63,27 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   const { error, session } = await requireAuth()
   if (error) return error
-  const existing = await prisma.product.findFirst({
-    where: { id: params.id, businessId: session.user.businessId },
-  })
-  if (!existing) return err('Not found', 404)
-  await prisma.product.delete({ where: { id: params.id } })
-  return ok({ success: true })
+
+  try {
+    const existing = await prisma.product.findFirst({
+      where: { id: params.id, businessId: session.user.businessId },
+    })
+
+    if (!existing) return err('Product not found', 404)
+
+    // Delete stock logs first to avoid foreign key constraint errors
+    await prisma.stockLog.deleteMany({
+      where: { productId: params.id },
+    })
+
+    // Delete the product
+    await prisma.product.delete({
+      where: { id: params.id },
+    })
+
+    return ok({ success: true })
+  } catch (e) {
+    console.error('Delete product error:', e)
+    return err('Cannot delete product — it may be used in existing invoices', 400)
+  }
 }
