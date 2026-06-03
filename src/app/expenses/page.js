@@ -19,6 +19,7 @@ const fmt = n => `UGX ${Number(n || 0).toLocaleString()}`
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([])
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ category: '', amount: '', note: '', date: '' })
   const [opened, { open, close }] = useDisclosure()
 
@@ -28,29 +29,36 @@ export default function ExpensesPage() {
     setExpenses(Array.isArray(data) ? data : [])
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   const save = async () => {
-    if (!form.category || !form.amount) {
-      notifications.show({ color: 'red', message: 'Category and amount are required' })
+    if (!form.category) {
+      notifications.show({ color: 'red', message: 'Please select a category' })
       return
     }
-    const res = await fetch('/api/expenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-    if (!res.ok) {
-      notifications.show({ color: 'red', message: 'Failed to save expense' })
+    if (!form.amount || form.amount <= 0) {
+      notifications.show({ color: 'red', message: 'Please enter a valid amount' })
       return
     }
-    const saved = await res.json()
-    setExpenses(prev => [saved, ...prev])
-    notifications.show({ color: 'green', message: 'Expense recorded' })
-    close()
-    setForm({ category: '', amount: '', note: '', date: '' })
+    setSaving(true)
+    try {
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        notifications.show({ color: 'red', message: 'Failed to save expense' })
+        return
+      }
+      const saved = await res.json()
+      setExpenses(prev => [saved, ...prev])
+      notifications.show({ color: 'green', message: 'Expense recorded' })
+      close()
+      setForm({ category: '', amount: '', note: '', date: '' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const del = async (id) => {
@@ -136,6 +144,7 @@ export default function ExpensesPage() {
             data={CATEGORIES}
             value={form.category}
             onChange={v => setForm(f => ({ ...f, category: v }))}
+            placeholder="Select category"
           />
           <NumberInput
             label="Amount (UGX)"
@@ -144,6 +153,7 @@ export default function ExpensesPage() {
             onChange={v => setForm(f => ({ ...f, amount: v }))}
             thousandSeparator=","
             min={0}
+            placeholder="0"
           />
           <TextInput
             label="Date"
@@ -156,8 +166,16 @@ export default function ExpensesPage() {
             rows={2}
             value={form.note}
             onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+            placeholder="e.g. Paid to Nakumatt for monthly stock"
           />
-          <Button onClick={save} fullWidth>Save expense</Button>
+          <Button
+            onClick={save}
+            fullWidth
+            loading={saving}
+            loaderProps={{ type: 'dots' }}
+          >
+            {saving ? 'Saving expense...' : 'Save expense'}
+          </Button>
         </Stack>
       </Modal>
     </DashboardShell>

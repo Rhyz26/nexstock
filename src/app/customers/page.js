@@ -16,6 +16,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('')
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null)
+  const [saving, setSaving] = useState(false)
   const [opened, { open, close }] = useDisclosure()
 
   const load = async () => {
@@ -25,9 +26,7 @@ export default function CustomersPage() {
     setCustomers(Array.isArray(data) ? data : [])
   }
 
-  useEffect(() => {
-    load()
-  }, [search])
+  useEffect(() => { load() }, [search])
 
   const openAdd = () => {
     setForm(empty)
@@ -42,26 +41,35 @@ export default function CustomersPage() {
   }
 
   const save = async () => {
-    const method = editing ? 'PUT' : 'POST'
-    const url = editing ? `/api/customers/${editing}` : '/api/customers'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-    if (!res.ok) {
-      notifications.show({ color: 'red', message: 'Failed to save customer' })
+    if (!form.name) {
+      notifications.show({ color: 'red', message: 'Customer name is required' })
       return
     }
-    const saved = await res.json()
-    if (editing) {
-      setCustomers(prev => prev.map(c => c.id === editing ? saved : c))
-      notifications.show({ color: 'green', message: 'Customer updated' })
-    } else {
-      setCustomers(prev => [saved, ...prev])
-      notifications.show({ color: 'green', message: 'Customer added' })
+    setSaving(true)
+    try {
+      const method = editing ? 'PUT' : 'POST'
+      const url = editing ? `/api/customers/${editing}` : '/api/customers'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        notifications.show({ color: 'red', message: 'Failed to save customer' })
+        return
+      }
+      const saved = await res.json()
+      if (editing) {
+        setCustomers(prev => prev.map(c => c.id === editing ? { ...saved, _count: c._count } : c))
+        notifications.show({ color: 'green', message: 'Customer updated' })
+      } else {
+        setCustomers(prev => [{ ...saved, _count: { invoices: 0 } }, ...prev])
+        notifications.show({ color: 'green', message: 'Customer added' })
+      }
+      close()
+    } finally {
+      setSaving(false)
     }
-    close()
   }
 
   const del = async (id) => {
@@ -142,11 +150,7 @@ export default function CustomersPage() {
                         </ActionIcon>
                       </Tooltip>
                       <Tooltip label="Delete">
-                        <ActionIcon
-                          variant="subtle"
-                          color="red"
-                          onClick={() => del(c.id)}
-                        >
+                        <ActionIcon variant="subtle" color="red" onClick={() => del(c.id)}>
                           <IconTrash size={15} />
                         </ActionIcon>
                       </Tooltip>
@@ -199,8 +203,16 @@ export default function CustomersPage() {
             value={form.address || ''}
             onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
           />
-          <Button onClick={save} fullWidth>
-            {editing ? 'Update customer' : 'Add customer'}
+          <Button
+            onClick={save}
+            fullWidth
+            loading={saving}
+            loaderProps={{ type: 'dots' }}
+          >
+            {saving
+              ? editing ? 'Updating...' : 'Adding customer...'
+              : editing ? 'Update customer' : 'Add customer'
+            }
           </Button>
         </Stack>
       </Modal>

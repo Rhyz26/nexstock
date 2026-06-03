@@ -28,6 +28,8 @@ export default function InventoryPage() {
   const [category, setCategory] = useState('')
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
   const [opened, { open, close }] = useDisclosure()
 
   const load = async () => {
@@ -56,37 +58,59 @@ export default function InventoryPage() {
   }
 
   const save = async () => {
-    const method = editing ? 'PUT' : 'POST'
-    const url = editing ? `/api/products/${editing}` : '/api/products'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    })
-    if (!res.ok) {
-      notifications.show({ color: 'red', message: 'Failed to save product' })
+    if (!form.name) {
+      notifications.show({ color: 'red', message: 'Product name is required' })
       return
     }
-    const saved = await res.json()
-    if (editing) {
-      setProducts(prev => prev.map(p => p.id === editing ? saved : p))
-      notifications.show({ color: 'green', message: 'Product updated' })
-    } else {
-      setProducts(prev => [saved, ...prev])
-      notifications.show({ color: 'green', message: 'Product added' })
+    if (!form.sellingPrice || form.sellingPrice <= 0) {
+      notifications.show({ color: 'red', message: 'Selling price is required' })
+      return
     }
-    close()
+    setSaving(true)
+    try {
+      const method = editing ? 'PUT' : 'POST'
+      const url = editing ? `/api/products/${editing}` : '/api/products'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        notifications.show({ color: 'red', message: 'Failed to save product' })
+        return
+      }
+      const saved = await res.json()
+      if (editing) {
+        setProducts(prev => prev.map(p => p.id === editing ? saved : p))
+        notifications.show({ color: 'green', message: 'Product updated successfully' })
+      } else {
+        setProducts(prev => [saved, ...prev])
+        notifications.show({ color: 'green', message: 'Product added successfully' })
+      }
+      close()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const del = async (id) => {
     if (!confirm('Are you sure you want to delete this product?')) return
-    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      notifications.show({ color: 'red', message: 'Failed to delete product' })
-      return
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        notifications.show({
+          color: 'red',
+          message: data.error || 'Failed to delete product',
+        })
+        return
+      }
+      setProducts(prev => prev.filter(p => p.id !== id))
+      notifications.show({ color: 'orange', message: 'Product deleted' })
+    } finally {
+      setDeletingId(null)
     }
-    setProducts(prev => prev.filter(p => p.id !== id))
-    notifications.show({ color: 'orange', message: 'Product deleted' })
   }
 
   const fmt = n => `UGX ${Number(n || 0).toLocaleString()}`
@@ -177,6 +201,7 @@ export default function InventoryPage() {
                         <ActionIcon
                           variant="subtle"
                           onClick={() => openEdit(p)}
+                          disabled={deletingId === p.id}
                         >
                           <IconEdit size={15} />
                         </ActionIcon>
@@ -186,6 +211,8 @@ export default function InventoryPage() {
                           variant="subtle"
                           color="red"
                           onClick={() => del(p.id)}
+                          loading={deletingId === p.id}
+                          loaderProps={{ type: 'dots' }}
                         >
                           <IconTrash size={15} />
                         </ActionIcon>
@@ -196,10 +223,15 @@ export default function InventoryPage() {
               ))}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#ADB5BD' }}>
+                  <td
+                    colSpan={7}
+                    style={{ textAlign: 'center', padding: '2rem', color: '#ADB5BD' }}
+                  >
                     <Stack align="center" gap={4}>
                       <IconPackage size={32} opacity={0.3} />
-                      <Text size="sm">No products yet. Click "Add product" to get started.</Text>
+                      <Text size="sm">
+                        No products yet. Click "Add product" to get started.
+                      </Text>
                     </Stack>
                   </td>
                 </tr>
@@ -219,12 +251,14 @@ export default function InventoryPage() {
           <TextInput
             label="Product name"
             required
+            placeholder="e.g. Sugar 1kg"
             value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
           />
           <Group grow>
             <TextInput
               label="SKU / Code"
+              placeholder="e.g. GR001"
               value={form.sku || ''}
               onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
             />
@@ -234,11 +268,13 @@ export default function InventoryPage() {
               value={form.category || ''}
               onChange={v => setForm(f => ({ ...f, category: v }))}
               clearable
+              placeholder="Select category"
             />
           </Group>
           <Group grow>
             <NumberInput
               label="Buying price (UGX)"
+              placeholder="0"
               value={form.buyingPrice || ''}
               onChange={v => setForm(f => ({ ...f, buyingPrice: v }))}
               min={0}
@@ -247,6 +283,7 @@ export default function InventoryPage() {
             <NumberInput
               label="Selling price (UGX)"
               required
+              placeholder="0"
               value={form.sellingPrice || ''}
               onChange={v => setForm(f => ({ ...f, sellingPrice: v }))}
               min={0}
@@ -256,6 +293,7 @@ export default function InventoryPage() {
           <Group grow>
             <NumberInput
               label="Stock quantity"
+              placeholder="0"
               value={form.stock || ''}
               onChange={v => setForm(f => ({ ...f, stock: v }))}
               min={0}
@@ -273,8 +311,17 @@ export default function InventoryPage() {
             value={form.unit || 'pcs'}
             onChange={v => setForm(f => ({ ...f, unit: v }))}
           />
-          <Button onClick={save} mt="sm" fullWidth>
-            {editing ? 'Update product' : 'Add product'}
+          <Button
+            onClick={save}
+            mt="sm"
+            fullWidth
+            loading={saving}
+            loaderProps={{ type: 'dots' }}
+          >
+            {saving
+              ? editing ? 'Updating product...' : 'Adding product...'
+              : editing ? 'Update product' : 'Add product'
+            }
           </Button>
         </Stack>
       </Modal>
