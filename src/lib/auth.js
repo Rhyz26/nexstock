@@ -13,13 +13,20 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           include: { business: true },
         })
+
         if (!user) return null
+
+        // Block deactivated accounts from logging in
+        if (user.isActive === false) return null
+
         const valid = await bcrypt.compare(credentials.password, user.password)
         if (!valid) return null
+
         return {
           id: user.id,
           name: user.name,

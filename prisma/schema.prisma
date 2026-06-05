@@ -13,6 +13,7 @@ model User {
   email         String    @unique
   password      String
   role          Role      @default(CASHIER)
+  isActive      Boolean   @default(true)
   businessId    String?
   business      Business? @relation(fields: [businessId], references: [id])
   createdAt     DateTime  @default(now())
